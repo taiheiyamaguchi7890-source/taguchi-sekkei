@@ -121,9 +121,12 @@ h3{font-family:var(--font-head);font-weight:600;font-size:1.16rem;letter-spacing
    margin:0 0 12px;color:var(--color-accent-dark);line-height:1.7;text-wrap:balance;}
 p{text-wrap:pretty;}
 
-/* fade in */
-.fade{opacity:0;transform:translateY(24px);transition:opacity .8s ease,transform .8s ease;}
-.fade.in{opacity:1;transform:none;}
+/* fade in（JSが有効なときだけ隠す。JS停止・未対応時は常に表示） */
+.js .fade{opacity:0;transform:translateY(24px);transition:opacity .8s ease,transform .8s ease;}
+.js .fade.in{opacity:1;transform:none;}
+@media (prefers-reduced-motion:reduce){
+  .js .fade{opacity:1;transform:none;transition:none;}
+}
 
 /* GREETING */
 .greet{display:grid;grid-template-columns:1fr 300px;gap:52px;align-items:start;}
@@ -418,6 +421,7 @@ footer{background:#101a3a;color:rgba(255,255,255,.72);padding:52px 0 110px;font-
 </style>
 </head>
 <body>
+<script>document.documentElement.className+=' js';</script>
 
 <!-- NAV -->
 <nav class="nav" id="nav">
@@ -1016,10 +1020,24 @@ footer{background:#101a3a;color:rgba(255,255,255,.72);padding:52px 0 110px;font-
     a.addEventListener('click',function(){m.classList.remove('open');});
   });
 
-  var io=new IntersectionObserver(function(es){
-    es.forEach(function(e){ if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);} });
-  },{threshold:0.08,rootMargin:'0px 0px -40px 0px'});
-  document.querySelectorAll('.fade').forEach(function(el){io.observe(el);});
+  var fades=document.querySelectorAll('.fade');
+  var revealAll=function(){
+    for(var i=0;i<fades.length;i++){fades[i].classList.add('in');}
+  };
+  if(!('IntersectionObserver' in window)){
+    revealAll();
+  }else{
+    // threshold:0 = 少しでも画面に入れば発火。
+    // 画面より縦に長い要素（スマホの1列グリッド等）でも必ず表示される。
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+      });
+    },{threshold:0,rootMargin:'0px 0px -40px 0px'});
+    for(var j=0;j<fades.length;j++){io.observe(fades[j]);}
+    // 保険：何らかの理由で発火しなかった場合も3秒後に必ず表示する
+    setTimeout(revealAll,3000);
+  }
 
   document.querySelectorAll('.faq-q').forEach(function(b){
     b.addEventListener('click',function(){b.parentElement.classList.toggle('open');});
